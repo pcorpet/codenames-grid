@@ -1,5 +1,6 @@
 {
   "background_color": "#ffffff",
+  "display": "standalone",
   "name": "Codenames - Grid",
   "short_name": "Codenames",
   "start_url": "./",
