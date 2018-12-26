@@ -286,13 +286,19 @@ console.log(lamp);
 //---------------------------------------------------
 // Update game
 //---------------------------------------------------
-function update()
+function update(seed)
 {
   var blackColor = "#222";
   var blueColor  = "#2C93E8";
   var redColor   = "#F56C4E";
   var greyColor  = "#FFEFD5";
-	
+
+  if (!seed) {
+    Math.seedrandom()
+    seed = Math.floor(Math.random() * 0x1000000).toString(16)
+    history.pushState({}, '', '#' + seed)
+  }
+  Math.seedrandom(seed)
   var check = d3.randomUniform(1)();
   var beginColor = check > 0.5 ? redColor  : blueColor;
   var otherColor = check > 0.5 ? blueColor : redColor;
@@ -378,9 +384,15 @@ function update()
 //---------------------------------------------------
 // Listeners
 //---------------------------------------------------
-document.getElementById("newGame").addEventListener("click", update);
+document.getElementById("newGame").addEventListener("click", function(event) {
+  event.target.blur();
+  update();
+});
 //First game
-update();
+update(window.location.hash.substr(1));
+window.onpopstate = function() {
+  update(window.location.hash.substr(1));
+}
 
 
 
