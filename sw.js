@@ -4,8 +4,8 @@ var urlsToPrefetch = [
   './grid.js',
   './icon.png',
   './icon-192.png',
+  './seedrandom.min.js',
   'https://d3js.org/d3.v4.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/seedrandom/2.4.4/seedrandom.min.js',
   'https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png',
 ];
 
@@ -36,7 +36,9 @@ self.addEventListener('install', function(event) {
 
 
 self.addEventListener('fetch', function(event) {
-  event.request.url = event.request.url.replace(/#.*$/, '');
+  if (event.request.url.match(/#/)) {
+    event.request.url = event.request.url.replace(/#.*$/, '');
+  }
 
   event.respondWith(
     // caches.match() will look for a cache entry in all of the caches available to the service worker.
