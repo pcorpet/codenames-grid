@@ -13,6 +13,13 @@ var lampHeight = 15;
 var lampStroke = 3;
 var lampShift  = 12;
 
+var cellDescriptions = {
+  coop: {color: "#00BA00", createSymbol: createCircle, clickedColor: "#fff"},
+  forbidden: {color: "#222", createSymbol: createCross},
+  neutral: {color: "#FFEFD5", createSymbol: createSquare, clickedColor: "#838690"},
+  player1: {color: "#F56C4E", createSymbol: createCircle, clickedColor: "#fff"},
+  player2: {color: "#2C93E8", createSymbol: createDiamond, clickedColor: "#fff"},
+};
 //---------------------------------------------------
 // Grid
 //---------------------------------------------------
@@ -283,26 +290,38 @@ var flash = grid.selectAll(".flash")
 
 console.log(lamp);
 
+function createCell(idx, {color, createSymbol, clickedColor}) {
+  d3.select('#name'+idx).style("fill", color);
+  d3.select('#diamond'+idx).attr("d", function(d) { return createSymbol(d); })
+  d3.select('#diamond'+idx).style("fill", "transparent");
+  if (!clickedColor) {
+    d3.select('#diamond'+idx).style("stroke", "grey");
+    return
+  }
+  d3.select('#diamond'+idx).style("cursor", "pointer");
+  d3.select('#diamond'+idx).style("stroke", color);
+  d3.select('#diamond'+idx).on('click', function(d) {
+     d.click ++;
+     if ((d.click)%2 == 0 ) { d3.select(this).style("fill", "transparent"); }
+     if ((d.click)%2 == 1 ) { d3.select(this).style("fill", clickedColor); }
+  });
+}
 //---------------------------------------------------
 // Update game
 //---------------------------------------------------
-function update(seed)
+function update(seed, duoMode)
 {
-  var blackColor = "#222";
-  var blueColor  = "#2C93E8";
-  var redColor   = "#F56C4E";
-  var greyColor  = "#FFEFD5";
 
   if (!seed) {
     Math.seedrandom()
     seed = Math.floor(Math.random() * 0x1000000).toString(16)
     history.pushState({}, '', '#' + seed)
   }
+  setDuoMode(duoMode)
   Math.seedrandom(seed)
   var check = d3.randomUniform(1)();
-  var beginColor = check > 0.5 ? redColor  : blueColor;
-  var otherColor = check > 0.5 ? blueColor : redColor;
-  
+  var beginPlayer = duoMode ? 'coop' : check > 0.5 ? 'player1'  : 'player2';
+
   // Array of indexes
   var rsort = new Array(25);
   for(var idx = 0; idx < 25; idx++)
@@ -310,7 +329,7 @@ function update(seed)
     rsort[idx] = idx;
   }
 
-  // Shuffling    
+  // Shuffling
   for(idx = 0; idx < rsort.length; idx++)
   {
     var swpIdx = idx + Math.floor(Math.random() * (rsort.length - idx));
@@ -318,80 +337,85 @@ function update(seed)
     var tmp = rsort[idx];
     rsort[idx] = rsort[swpIdx];
     rsort[swpIdx] = tmp;
+    if (duoMode === "heads") {
+      // Invert the view
+      rsort[idx] = 24 - rsort[idx]
+    }
   }
 
+  var cells = duoMode ? duoMode === "heads" ? [
+    ['forbidden', 1],
+    ['neutral', 5],
+    ['coop', 9],
+    ['neutral', 1],
+    ['forbidden', 1],
+    ['neutral', 7],
+    ['forbidden', 1],
+  ] : [
+    ['coop', 9],
+    ['neutral', 5],
+    ['forbidden', 3],
+    ['neutral', 8],
+  ] : [
+    ['forbidden', 1],
+    ['neutral', 7],
+    ['player1', beginPlayer === 'player1' ? 9 : 8],
+    ['player2', beginPlayer === 'player1' ? 8 : 9],
+  ]
 
-  // Black
-  d3.select('#name'+rsort[0]).style("fill", blackColor);
-  d3.select('#diamond'+rsort[0]).attr("d", function(d) { return createCross(d); })
-  d3.select('#diamond'+rsort[0]).style("fill", "transparent");
-	//d3.select('#diamond'+rsort[0]).style("transform", "rotate(2deg)");
- // d3.select('#diamond'+rsort[0]).on('click', function(d) {
- //       d.click ++;
- //       if ((d.click)%2 == 0 ) { d3.selectAll(".square").style("fill","transparent"); }
- //       if ((d.click)%2 == 1 ) { d3.selectAll(".square").style("fill","#838690"); }
- //    });
-  
-  // Grey
-  for(idx = 1; idx < 8; idx++)
-  {
-    d3.select('#name'+rsort[idx]).style("fill", greyColor);
-    d3.select('#diamond'+rsort[idx]).style("fill", "transparent");
-    d3.select('#diamond'+rsort[idx]).attr("d", function(d) { return createSquare(d); })
-    d3.select('#diamond'+rsort[idx]).style("stroke", greyColor);
-    d3.select('#diamond'+rsort[idx]).on('click', function(d) {
-       d.click ++;
-       if ((d.click)%2 == 0 ) { d3.select(this).style("fill","transparent"); }
-       if ((d.click)%2 == 1 ) { d3.select(this).style("fill","#838690"); }
-    });
+  var idx = 0
+  for(var [cellType, count] of cells) {
+    var next_max = idx + count
+    for(idx; idx < next_max; idx++) {
+      createCell(rsort[idx], cellDescriptions[cellType])
+    }
   }
 
-  // Blue
-  for(idx = 8; idx < 16; idx++)
-  {
-    d3.select('#name'+rsort[idx]).style("fill", otherColor);
-    d3.select('#diamond'+rsort[idx]).style("fill", "transparent");
-    d3.select('#diamond'+rsort[idx]).attr("d", function(d) { return createDiamond(d); })
-    d3.select('#diamond'+rsort[idx]).on('click', function(d) {
-       d.click ++;
-       if ((d.click)%2 == 0 ) { d3.select(this).style("fill","transparent"); }
-       if ((d.click)%2 == 1 ) { d3.select(this).style("fill","#fff"); }
-    });
-  }
-
-  // Red
-  for(idx = 16; idx < 25; idx++)
-  {
-    d3.select('#name'+rsort[idx]).style("fill", beginColor);
-    d3.select('#diamond'+rsort[idx]).style("fill", "transparent");
-    d3.select('#diamond'+rsort[idx]).attr("d", function(d) { return createCircle(d); })
-    d3.select('#diamond'+rsort[idx]).on('click', function(d) {
-       d.click ++;
-       if ((d.click)%2 == 0 ) { d3.select(this).style("fill","transparent"); }
-       if ((d.click)%2 == 1 ) { d3.select(this).style("fill","#fff"); }
-    });
-    
-  }
-	
   // Lamps
   for(idx = 0; idx < 4; idx++)
   {
-  	d3.select('#lampid'+idx).style("fill", beginColor);
+  	d3.select('#lampid'+idx).style("fill", cellDescriptions[beginPlayer].color);
   }
   
 }
 
+function getDuoMode() {
+  return (window.location.search.substr(1).split('&').find(kv => kv.startsWith("duo=")) || '').substr("duo=".length)
+}
+
+function setDuoMode(duoMode) {
+  var url = new URL(window.location.href)
+  if (!duoMode) {
+    url.searchParams.delete("duo")
+    history.pushState({}, '', url)
+    document.getElementById('duo').innerText = "Mode duo"
+    document.getElementById('switch-duo').setAttribute("style", "display: none;")
+    document.getElementById('switch-duo').setAttribute("href", "")
+    return
+  }
+  url.searchParams.set("duo", duoMode)
+  history.pushState({}, '', url)
+  var otherUrl = new URL(url)
+  otherUrl.searchParams.set("duo", duoMode === "tails" ? "heads" : "tails")
+  document.getElementById('duo').innerText = "Mode \u00e9quipes"
+  document.getElementById('switch-duo').setAttribute("style", "display: inline;")
+  document.getElementById('switch-duo').setAttribute("href", otherUrl.href)
+}
 //---------------------------------------------------
 // Listeners
 //---------------------------------------------------
 document.getElementById("newGame").addEventListener("click", function(event) {
   event.target.blur();
-  update();
+  update(undefined, getDuoMode());
 });
+document.getElementById("duo").addEventListener("click", function(event) {
+  event.target.blur();
+  update(window.location.hash.substr(1), !getDuoMode() && "tails")
+})
 //First game
-update(window.location.hash.substr(1));
+update(window.location.hash.substr(1), getDuoMode());
 window.onpopstate = function() {
-  update(window.location.hash.substr(1));
+  update(window.location.hash.substr(1), getDuoMode());
 }
 
 
